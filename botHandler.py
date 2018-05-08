@@ -1,22 +1,28 @@
 # coding=utf-8
 import io
 from multiprocessing import Pool
-
 import requests
 from meme.generator import Memegen
+import urllib
 
 
 class BotHandler:
     def __init__(self, token):
+        self.messages_to_send = []
+        self.offset = None
         self.token = token
         self.api_url = "https://api.telegram.org/bot{}/".format(token)
 
-    def get_updates(self, offset=None, timeout=30):
+    def get_updates(self, timeout=30):
         method = 'getUpdates'
-        params = {'timeout': timeout, 'offset': offset}
+        params = {'timeout': timeout, 'offset': self.offset}
         resp = requests.get(self.api_url + method, params)
         result_json = resp.json()['result']
-        return result_json
+        if len(result_json) != 0:
+            print 'add new messeges'
+            self.messages_to_send.extend(result_json)
+            self.offset = result_json[-1]['update_id'] + 1
+        return len(result_json)
 
     def send_message(self, chat_id, text):
         params = {'chat_id': chat_id, 'text': text}
@@ -24,9 +30,9 @@ class BotHandler:
         resp = requests.post(self.api_url + method, params)
         return resp
 
-    def send_image(self, chatId):
+    def send_image(self, chat_id):
         files = {'photo': open('/path/to/img.jpg', 'rb')}
-        data = {'chat_id': chatId}
+        data = {'chat_id': chat_id}
         r = requests.post(self.api_url + "sendPhoto", files=files, data=data)
         print(r.status_code, r.reason, r.content)
         return r
@@ -42,17 +48,10 @@ class BotHandler:
         return r
 
     def get_last_update(self):
-        print "trying to get new message"
-        get_result = self.get_updates()
-
-        if len(get_result) > 0:
-            last_update = get_result[-1]
-        else:
-            print len(get_result)
-            last_update = get_result[len(get_result)]
-
-        print "finished receiving new message {}".format(last_update)
-        return last_update
+        if len(self.messages_to_send) != 0:
+            message = self.messages_to_send.pop()
+            print "start generating receiving for message {}".format(message)
+            return message
 
 
 greet_bot = BotHandler('531246614:AAHec96fLxTRBJg8XiJmwhahkcicY1G2KGc')
@@ -61,7 +60,7 @@ memegen = Memegen()
 
 
 def send_meme(last_update):
-    last_chat_text = last_update['message']['text']
+    last_chat_text = last_update['message']['text'].encode('UTF-8')
     print "received text {}".format(last_chat_text)
 
     last_chat_id = last_update['message']['chat']['id']
@@ -73,31 +72,23 @@ def send_meme(last_update):
                                welcomeMessage.format(
                                    last_chat_name))
     else:
-        text_in_utf = last_chat_text.encode('UTF-8')
         print "started generating meme {}".format(last_chat_text)
+        text_in_utf = last_chat_text.decode('utf-8')
+        url = memegen.generate("", text_in_utf)
         greet_bot.send_image_remote_file(
-            memegen.generate("", text_in_utf),
+            url,
             last_chat_id)
         print "finished sending meme".format(last_chat_text)
 
 
-def print_finish():
-    print 'finish';
-
-
 def main():
-    new_offset = None
     pool = Pool(processes=10)  # Start a worker processes.
 
     while True:
-        greet_bot.get_updates(new_offset)
+        greet_bot.get_updates()
         last_update = greet_bot.get_last_update()
-        last_update_id = last_update['update_id']
-        send_meme(last_update)
-        pool.apply_async(send_meme, [last_update],
-                                  print_finish)  # Evaluate "f(10)" asynchronously calling callback when finished.
-
-        new_offset = last_update_id + 1
+        if last_update != None:
+            pool.apply_async(send_meme, [last_update])
 
 
 if __name__ == '__main__':

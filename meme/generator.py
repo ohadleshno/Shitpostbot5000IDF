@@ -1,10 +1,10 @@
 # coding=utf-8
 import random
 import requests
+import urllib
 
 
 class Memegen:
-
     def __init__(self):
         random.seed(123932)
         self.BASE_URL = "https://memegen.link"
@@ -41,7 +41,16 @@ class Memegen:
         return help
 
     def build_url(self, template, top, bottom, alt=None):
-        path = "/{0}/{1}/{2}.jpg?font=mplus-2p-black".format(template, top or '_', bottom or '_')
+        new_top = ""
+        new_bottom = bottom
+
+        if len(bottom) > 20:
+            words = bottom.split()
+            new_bottom = " ".join(words[:4])
+            new_top = " ".join(words[4:])
+
+        path = "/{0}/{1}/{2}.jpg?font=mplus-2p-black".format(template, urllib.quote(new_top.encode('utf8')) or '_',
+                                                             urllib.quote(new_bottom.encode('utf8')) or '_')
 
         if alt:
             path += "?alt={}".format(alt)
