@@ -21,7 +21,7 @@ class Memegen:
 
         for description, api_link in template.items():
             alias = api_link.split("/api/templates/")[1]
-            link = "https://memegen.link/{}/your-text/goes-here.jpg".format(alias)
+            link = "https://memegen.link/{}/your-text/goes-here.jpg?font=mplus-2p-black".format(alias)
 
             alias = alias.encode('utf8')
             description = description.encode('utf8')
@@ -40,7 +40,7 @@ class Memegen:
         return help
 
     def build_url(self, template, top, bottom, alt=None):
-        path = "/{0}/{1}/{2}.jpg".format(template, top or '_', bottom or '_')
+        path = "/{0}/{1}/{2}.jpg?font=mplus-2p-black".format(template, top or '_', bottom or '_')
 
         if alt:
             path += "?alt={}".format(alt)
@@ -50,7 +50,7 @@ class Memegen:
         return url
 
     def generate(self, top, bottom):
-        return self.build_url(self.valid_templates[random.randint(0, len(self.valid_templates) - 1)].decode('UTF-8'), top, bottom)
+        return self.build_url(self.valid_templates[random.randint(0, len(self.valid_templates) - 1)].decode('UTF-8'), top[::-1], bottom[::-1])
 
 
 def image_exists(path):
