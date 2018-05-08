@@ -21,3 +21,5 @@ venv/tcl/tcl8\.5/tzdata/
 venv/tcl/tcl8\.5/
 
 venv/
+
+*.pyc
