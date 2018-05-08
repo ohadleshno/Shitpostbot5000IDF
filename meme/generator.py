@@ -49,8 +49,23 @@ class Memegen:
 
         return url
 
+    # -*- coding: utf-8 -*-
+    def isAllEnglish(self, s):
+        try:
+            s.encode(encoding='utf-8').decode('ascii')
+        except UnicodeDecodeError:
+            return False
+        else:
+            return True
+
     def generate(self, top, bottom):
-        return self.build_url(self.valid_templates[random.randint(0, len(self.valid_templates) - 1)].decode('UTF-8'), top[::-1], bottom[::-1])
+        if not self.isAllEnglish(top):
+            top = top[::-1]
+        if not self.isAllEnglish(bottom):
+            bottom = bottom[::-1]
+
+        return self.build_url(self.valid_templates[random.randint(0, len(self.valid_templates) - 1)].decode('UTF-8'),
+                              top, bottom)
 
 
 def image_exists(path):
