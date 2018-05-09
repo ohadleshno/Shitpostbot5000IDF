@@ -1,17 +1,32 @@
 # coding=utf-8
 import io
+import json
 from multiprocessing import Pool
+
 import requests
+
 from meme.generator import Memegen
-import urllib
+
+# from telegram import InlineKeyboardButton
+
+filename = 'idfconfessions.txt'
 
 
 class BotHandler:
     def __init__(self, token):
+        # self.confessions = self.readFromFile(fname)
+        self.inline_keyboard = [[
+            {'text': 'אהבתי', 'callback_data': 'like'},
+            {'text': 'נסה שוב', 'callback_data': 'retry'}]]
         self.messages_to_send = []
+        self.callback_messages = []
         self.offset = None
         self.token = token
         self.api_url = "https://api.telegram.org/bot{}/".format(token)
+
+    def readFromFile(fname):
+        with open(fname) as f:
+            return f.readlines()
 
     def get_updates(self, timeout=30):
         method = 'getUpdates'
@@ -20,8 +35,15 @@ class BotHandler:
         result_json = resp.json()['result']
         if len(result_json) != 0:
             print 'add new messeges'
-            self.messages_to_send.extend(result_json)
+
+            for result in result_json:
+                if u'callback_query' not in result:
+                    self.messages_to_send.append(result)
+                else:
+                    self.callback_messages.append(result['callback_query'])
+
             self.offset = result_json[-1]['update_id'] + 1
+
         return len(result_json)
 
     def send_message(self, chat_id, text):
@@ -30,19 +52,32 @@ class BotHandler:
         resp = requests.post(self.api_url + method, params)
         return resp
 
+    def recived_send_message(self, chat_id):
+        params = {'chat_id': chat_id, 'limit': 1}
+        method = 'getHistory'
+        resp = requests.get(self.api_url + method, params)
+        print resp
+        return resp
+
     def send_image(self, chat_id):
         files = {'photo': open('/path/to/img.jpg', 'rb')}
-        data = {'chat_id': chat_id}
+        data = {'chat_id': chat_id, 'reply_markup': {'inline_keyboard': self.inline_keyboard}}
         r = requests.post(self.api_url + "sendPhoto", files=files, data=data)
         print(r.status_code, r.reason, r.content)
         return r
+
+    def build_keyboard(self, items):
+        keyboard = [[item] for item in items]
+        reply_markup = {"keyboard": keyboard, "one_time_keyboard": True}
+        return json.dumps(reply_markup)
 
     def send_image_remote_file(self, img_url, chat_id):
         remote_image = requests.get(img_url)
         photo = io.BytesIO(remote_image.content)
         photo.name = 'img.png'
         files = {'photo': photo}
-        data = {'chat_id': chat_id}
+        data = {'chat_id': chat_id, 'parse_mode': 'Markdown',
+                'reply_markup': json.dumps({'inline_keyboard': self.inline_keyboard})}
         r = requests.post(self.api_url + "sendPhoto", files=files, data=data)
         print(r.status_code, r.reason, r.content)
         return r
@@ -52,6 +87,10 @@ class BotHandler:
             message = self.messages_to_send.pop()
             print "start generating receiving for message {}".format(message)
             return message
+
+    def get_last_callback(self):
+        if len(self.callback_messages) != 0:
+            return self.callback_messages.pop()
 
 
 greet_bot = BotHandler('531246614:AAHec96fLxTRBJg8XiJmwhahkcicY1G2KGc')
@@ -64,6 +103,7 @@ def send_meme(last_update):
     print "received text {}".format(last_chat_text)
 
     last_chat_id = last_update['message']['chat']['id']
+    print "last chat id {}".format(last_chat_id)
 
     if last_chat_text.lower() == "/start":
         last_chat_name = last_update['message']['chat']['first_name']
@@ -81,6 +121,18 @@ def send_meme(last_update):
         print "finished sending meme".format(last_chat_text)
 
 
+def send_callback_message(text,last_chat_id):
+    print 'sending callback message for chat_id {}'.format(last_chat_id)
+    last_chat_text = text.encode('utf8')
+
+    if last_chat_text.lower() in ['like']:
+        greet_bot.recived_send_message(last_chat_id)
+        # do +1 for photo
+        greet_bot.send_message(last_chat_id, "תודה רוצה עוד אחד? הקלד עוד משפט")
+    elif last_chat_text.lower() == 'retry':
+        # do -1 for photo
+        greet_bot.send_message(last_chat_id, "לא נורא נסה עוד פעם. הקלד עוד משפט")
+
 def main():
     pool = Pool(processes=10)  # Start a worker processes.
 
@@ -89,6 +141,11 @@ def main():
         last_update = greet_bot.get_last_update()
         if last_update != None:
             pool.apply_async(send_meme, [last_update])
+
+        last_callback = greet_bot.get_last_callback()
+        if last_callback != None:
+            send_callback_message(last_callback['data'],last_callback['message']['chat']['id'])
+
 
 
 if __name__ == '__main__':

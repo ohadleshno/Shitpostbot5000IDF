@@ -7,7 +7,7 @@ import urllib
 class Memegen:
     def __init__(self):
         random.seed(123932)
-        self.BASE_URL = "https://memegen.link"
+        self.BASE_URL = "http://localhost:5000"
         self.template_info = self.get_template_info()
         self.valid_templates = self.get_valid_templates()
         self.template_list = self.get_template_list()

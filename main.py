@@ -1,13 +1,5 @@
-# coding=utf-8
-from meme.generator import Memegen
-
 import requests
 
-
-
-# memegen = Memegen()
-# print(memegen.generate("הלו מותק", "בובה"))
-# print(memegen.generate("hello babe", "בובה חמודה"))
 def fetchandwritetofile(url):
     result = requests.get(url).json()
     messages = result['data']
@@ -19,9 +11,6 @@ def fetchandwritetofile(url):
     nextUrl = result['paging']['next']
     fetchandwritetofile(nextUrl)
 
-def readFromFile(fname):
-    with open(fname) as f:
-        return f.readlines()
 
 
 filename = 'idfconfessions.txt'
