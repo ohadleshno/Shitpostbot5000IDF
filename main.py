@@ -53,6 +53,3 @@ file.close()
 print readFromFile(filename)
 
 
-file = open('allconfessions')
-
-
