@@ -13,6 +13,7 @@ filename = 'idfconfessions.txt'
 liked = []
 no_liked = []
 message_to_url = {}
+message_url_tuples = []
 
 
 class BotHandler:
@@ -75,7 +76,7 @@ class BotHandler:
         return json.dumps(reply_markup)
 
     def send_image_remote_file(self, img_url, chat_id):
-        global message_to_url
+        global message_url_tuples
         remote_image = requests.get(img_url)
         photo = io.BytesIO(remote_image.content)
         photo.name = 'img.png'
@@ -84,6 +85,9 @@ class BotHandler:
                 'reply_markup': json.dumps({'inline_keyboard': self.inline_keyboard})}
         r = requests.post(self.api_url + "sendPhoto", files=files, data=data)
         message_to_url[r.json()['result']['message_id']] = img_url
+        message_url_tuples.append((r.json()['result']['message_id'], img_url))
+        with open('imgid2url/{}.txt'.format(r.json()['result']['message_id']), 'w') as f:
+            f.write(img_url)
         print(r.status_code, r.reason, r.content)
         return r
 
@@ -112,7 +116,7 @@ def send_meme(last_update):
 
     if last_chat_text.lower() == "/start":
         last_chat_name = last_update['message']['chat']['first_name']
-        welcomeMessage = 'Hi {} welcome to mahanet 2018 shitpostbotidf5000. Send message and you will receive meme.'
+        welcomeMessage = 'שלום {} ברוך הבא לבוט מגנרט ממים צהליים 5000. הקלד משפט ונגרט לך מם מותאם למשפט'
         greet_bot.send_message(last_chat_id,
                                welcomeMessage.format(
                                    last_chat_name))
@@ -141,19 +145,27 @@ def send_callback_message(last_callback):
 
 
 def print_liked_and_unliked():
-    global liked, no_liked  ,message_to_url
-    if (len(liked) >= 15):
+    global liked, no_liked
+    if (len(liked) >= 20):
+        liked_urls = []
+        for i in liked:
+            with open('imgid2url/{}.txt'.format(i), 'r') as f:
+                liked_urls.append(f.read())
         with open('like.txt', 'a') as f:
-            f.write('\n'.join([message_to_url[i] for i in liked]) + '\n')
+            f.write('\n'.join(liked_urls) + '\n')
         liked = []
 
-    if (len(no_liked) >= 15):
+    if (len(no_liked) >= 20):
+        dis_liked_urls = []
+        for i in liked:
+            with open('imgid2url/{}.txt'.format(i), 'r') as f:
+                dis_liked_urls.append(f.read())
         with open('unlike.txt', 'a') as f:
-            f.write('\n'.join([message_to_url[i] for i in no_liked]) + '\n')
+            f.write('\n'.join(dis_liked_urls) + '\n')
         no_liked = []
 
-
 def main():
+    global message_url_tuples
     pool = Pool(processes=10)  # Start a worker processes.
 
     while True:
