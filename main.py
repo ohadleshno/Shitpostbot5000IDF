@@ -24,11 +24,11 @@ def readFromFile(fname):
         return f.readlines()
 
 
-filename = 'lotemconfessions.txt'
+filename = 'gimelconfessions.txt'
 file = open(filename, 'w')
 
 # TODO: the url is valid for a certain period of time be sure to recheck if needed
-uu = "https://graph.facebook.com/v2.6/lotemConfessions?fields=posts.limit(100)&access_token=EAACEdEose0cBABA8VUNzolwRkPG373uU9r708Dq3d6VsJi4nhxUDnvdXGtGY9IZB2kkQ3xpoBfKWzZC1rJPjDm1RcBrocsAlAANM7FiOXVBbKORrf63Yq84SRmHQSVTKwHT7oAPbIN9Qe5QVPkcZCzrNljJ9ZAdvZBdxGOe2Rct4ICclhgEuqmJL1KtmTVR4ZD"
+uu = "https://graph.facebook.com/v2.6/541722549557331?fields=posts.limit(100)&access_token=EAACEdEose0cBABA8VUNzolwRkPG373uU9r708Dq3d6VsJi4nhxUDnvdXGtGY9IZB2kkQ3xpoBfKWzZC1rJPjDm1RcBrocsAlAANM7FiOXVBbKORrf63Yq84SRmHQSVTKwHT7oAPbIN9Qe5QVPkcZCzrNljJ9ZAdvZBdxGOe2Rct4ICclhgEuqmJL1KtmTVR4ZD"
 fetchandwritetofile(uu)
 file.close()
 print readFromFile(filename)
