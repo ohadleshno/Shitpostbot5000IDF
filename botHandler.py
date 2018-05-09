@@ -10,6 +10,9 @@ from meme.generator import Memegen
 # from telegram import InlineKeyboardButton
 
 filename = 'idfconfessions.txt'
+liked = []
+no_liked = []
+message_to_url = {}
 
 
 class BotHandler:
@@ -72,6 +75,7 @@ class BotHandler:
         return json.dumps(reply_markup)
 
     def send_image_remote_file(self, img_url, chat_id):
+        global message_to_url
         remote_image = requests.get(img_url)
         photo = io.BytesIO(remote_image.content)
         photo.name = 'img.png'
@@ -79,6 +83,7 @@ class BotHandler:
         data = {'chat_id': chat_id, 'parse_mode': 'Markdown',
                 'reply_markup': json.dumps({'inline_keyboard': self.inline_keyboard})}
         r = requests.post(self.api_url + "sendPhoto", files=files, data=data)
+        message_to_url[r.json()['result']['message_id']] = img_url
         print(r.status_code, r.reason, r.content)
         return r
 
@@ -121,17 +126,32 @@ def send_meme(last_update):
         print "finished sending meme".format(last_chat_text)
 
 
-def send_callback_message(text,last_chat_id):
+def send_callback_message(last_callback):
+    last_chat_id = last_callback['message']['chat']['id']
     print 'sending callback message for chat_id {}'.format(last_chat_id)
-    last_chat_text = text.encode('utf8')
+    last_chat_text = last_callback['data'].encode('utf8')
 
     if last_chat_text.lower() in ['like']:
         greet_bot.recived_send_message(last_chat_id)
-        # do +1 for photo
+        liked.append(last_callback['message']['message_id'])
         greet_bot.send_message(last_chat_id, "תודה רוצה עוד אחד? הקלד עוד משפט")
     elif last_chat_text.lower() == 'retry':
-        # do -1 for photo
+        no_liked.append(last_callback['message']['message_id'])
         greet_bot.send_message(last_chat_id, "לא נורא נסה עוד פעם. הקלד עוד משפט")
+
+
+def print_liked_and_unliked():
+    global liked, no_liked  ,message_to_url
+    if (len(liked) >= 15):
+        with open('like.txt', 'a') as f:
+            f.write('\n'.join([message_to_url[i] for i in liked]) + '\n')
+        liked = []
+
+    if (len(no_liked) >= 15):
+        with open('unlike.txt', 'a') as f:
+            f.write('\n'.join([message_to_url[i] for i in no_liked]) + '\n')
+        no_liked = []
+
 
 def main():
     pool = Pool(processes=10)  # Start a worker processes.
@@ -141,11 +161,11 @@ def main():
         last_update = greet_bot.get_last_update()
         if last_update != None:
             pool.apply_async(send_meme, [last_update])
-
         last_callback = greet_bot.get_last_callback()
         if last_callback != None:
-            send_callback_message(last_callback['data'],last_callback['message']['chat']['id'])
+            send_callback_message(last_callback)
 
+        print_liked_and_unliked()
 
 
 if __name__ == '__main__':
