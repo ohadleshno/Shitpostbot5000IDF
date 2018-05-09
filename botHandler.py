@@ -27,8 +27,13 @@ class BotHandler:
         self.offset = None
         self.token = token
         self.api_url = "https://api.telegram.org/bot{}/".format(token)
+        self.confessions = []
+        try:
+            self.confessions = self.readFromFile('allconfessions.txt')
+        except Exception:
+            print("Error: Could not read all confesions file!!!!!")
 
-    def readFromFile(fname):
+    def readFromFile(self, fname):
         with open(fname) as f:
             return f.readlines()
 
@@ -123,10 +128,14 @@ def send_meme(last_update):
     else:
         print "started generating meme {}".format(last_chat_text)
         text_in_utf = last_chat_text.decode('utf-8')
-        url = memegen.generate("", text_in_utf)
-        greet_bot.send_image_remote_file(
-            url,
-            last_chat_id)
+        if "וידוי" in text_in_utf:
+            #TODO add confessions
+            greet_bot.send_message(last_chat_id, memegen.confessions[0])
+        else:
+            url = memegen.generate("", text_in_utf)
+            greet_bot.send_image_remote_file(
+                url,
+                last_chat_id)
         print "finished sending meme".format(last_chat_text)
 
 
